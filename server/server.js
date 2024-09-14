@@ -70,17 +70,27 @@ app.post('/notifications', (req, res) => {
     return res.status(400).json({ error: 'Invalid data' });
   }
 
-  // Insert notification for each user
-  userIds.forEach(userId => {
-    const query = 'INSERT INTO notifications (user_id, message, expiry_date) VALUES (?, ?, ?)';
-    db.query(query, [userId, message, expiry_date], (err, result) => {
-      if (err) {
-        console.error('Error inserting notification:', err);
-      }
+  // Use Promise.all to handle asynchronous operations
+  Promise.all(userIds.map(userId => {
+    return new Promise((resolve, reject) => {
+      const query = 'INSERT INTO notifications (user_id, message, expiry_date, is_read) VALUES (?, ?, ?, ?)';
+      db.query(query, [userId, message, expiry_date, false], (err, result) => {
+        if (err) {
+          console.error('Error inserting notification:', err);
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      });
     });
-  });
-
-  res.status(201).json({ success: true, message: 'Notification sent!' });
+  }))
+    .then(() => {
+      res.status(201).json({ success: true, message: 'Notification sent!' });
+    })
+    .catch(err => {
+      console.error('Error inserting notifications:', err);
+      res.status(500).json({ error: 'Failed to insert notifications' });
+    });
 });
 
 // Start the server

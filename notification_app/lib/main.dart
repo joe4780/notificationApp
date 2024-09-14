@@ -203,9 +203,15 @@ class _MyHomePageState extends State<MyHomePage> {
                       itemCount: _notifications.length,
                       itemBuilder: (context, index) {
                         final notification = _notifications[index];
+                        final isRead =
+                            notification['is_read'] == 1; // Convert to boolean
                         return ListTile(
                           title: Text(notification['message']),
-                          subtitle: Text('Sent to: ${notification['user_id']}'),
+                          subtitle: Text(
+                              'Sent to: ${notification['user_id']} - Read: $isRead'),
+                          trailing: isRead
+                              ? const Icon(Icons.check, color: Colors.green)
+                              : const Icon(Icons.clear, color: Colors.red),
                         );
                       },
                     )
