@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
   runApp(const MyApp());
@@ -7,46 +9,21 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Notification App',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Admin Notification Panel'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
 
   final String title;
 
@@ -55,71 +32,236 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  final _formKey = GlobalKey<FormState>();
+  String _message = '';
+  List<String> _selectedUsers = [];
+  String _expiryDate = '';
+  List<String> _users = [];
+  List<dynamic> _notifications = [];
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _fetchUsers(); // Fetch users for admin to select
+    _fetchNotifications(); // Fetch notifications
+  }
+
+  Future<void> _fetchUsers() async {
+    try {
+      final response = await http.get(Uri.parse('http://localhost:3000/users'));
+      if (response.statusCode == 200) {
+        setState(() {
+          _users = List<String>.from(
+              jsonDecode(response.body).map((user) => user['name']));
+        });
+      } else {
+        print('Failed to fetch users: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching users: $e');
+    }
+  }
+
+  Future<void> _fetchNotifications() async {
+    try {
+      final response =
+          await http.get(Uri.parse('http://localhost:3000/notifications'));
+      if (response.statusCode == 200) {
+        setState(() {
+          _notifications = jsonDecode(response.body);
+        });
+      } else {
+        print('Failed to fetch notifications: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching notifications: $e');
+    }
+  }
+
+  Future<void> _sendNotification() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+
+      try {
+        // Fetch user IDs corresponding to selected user names
+        final userIdsResponse =
+            await http.get(Uri.parse('http://localhost:3000/users'));
+        final userIdsData = jsonDecode(userIdsResponse.body) as List<dynamic>;
+        final userIdsMap = {
+          for (var user in userIdsData) user['name']: user['id']
+        };
+
+        final selectedUserIds =
+            _selectedUsers.map((userName) => userIdsMap[userName]).toList();
+
+        final response = await http.post(
+          Uri.parse('http://localhost:3000/notifications'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'message': _message,
+            'userIds': selectedUserIds,
+            'expiry_date': _expiryDate,
+          }),
+        );
+
+        if (response.statusCode == 201) {
+          // Notification sent successfully
+          _fetchNotifications(); // Refresh the list
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notification sent!')),
+          );
+        } else {
+          print('Failed to send notification: ${response.statusCode}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to send notification')),
+          );
+        }
+      } catch (e) {
+        print('Error sending notification: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to send notification')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Text('Admin Panel - Send Notification',
+                  style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 20),
+
+              // Button to select users
+              ElevatedButton(
+                onPressed: () async {
+                  final selectedUsers = await _showUserSelectionDialog(context);
+                  if (selectedUsers != null) {
+                    setState(() {
+                      _selectedUsers = selectedUsers;
+                    });
+                  }
+                },
+                child: const Text('Select Users'),
+              ),
+              const SizedBox(height: 20),
+
+              // Display selected users count
+              Text(
+                'Selected Users: ${_selectedUsers.length}',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 20),
+
+              // Admin Form to send notification
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      decoration: const InputDecoration(
+                          labelText: 'Notification Message'),
+                      onSaved: (value) {
+                        _message = value!;
+                      },
+                      validator: (value) =>
+                          value!.isEmpty ? 'Please enter a message' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                          labelText: 'Expiry Date (optional)'),
+                      onSaved: (value) {
+                        _expiryDate = value!;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _sendNotification,
+                      child: const Text('Send Notification'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Display Notifications
+              Text('Notifications',
+                  style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: 10),
+              _notifications.isNotEmpty
+                  ? ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _notifications.length,
+                      itemBuilder: (context, index) {
+                        final notification = _notifications[index];
+                        return ListTile(
+                          title: Text(notification['message']),
+                          subtitle: Text('Sent to: ${notification['user_id']}'),
+                        );
+                      },
+                    )
+                  : const Text('No notifications available'),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+
+  Future<List<String>?> _showUserSelectionDialog(BuildContext context) async {
+    List<String> selectedUsers = [];
+    return showDialog<List<String>>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Select Users'),
+          content: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: _users.map((user) {
+                  return CheckboxListTile(
+                    title: Text(user),
+                    value: selectedUsers.contains(user),
+                    onChanged: (isChecked) {
+                      setState(() {
+                        if (isChecked == true) {
+                          selectedUsers.add(user);
+                        } else {
+                          selectedUsers.remove(user);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(selectedUsers);
+              },
+              child: const Text('OK'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(null);
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
