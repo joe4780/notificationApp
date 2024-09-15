@@ -70,11 +70,14 @@ app.post('/notifications', (req, res) => {
     return res.status(400).json({ error: 'Invalid data' });
   }
 
+  // Handle expiry_date: if empty, set it to null
+  const expiryDate = expiry_date && expiry_date.trim() !== '' ? expiry_date : null;
+
   // Use Promise.all to handle asynchronous operations
   Promise.all(userIds.map(userId => {
     return new Promise((resolve, reject) => {
       const query = 'INSERT INTO notifications (user_id, message, expiry_date, is_read) VALUES (?, ?, ?, ?)';
-      db.query(query, [userId, message, expiry_date, false], (err, result) => {
+      db.query(query, [userId, message, expiryDate, false], (err, result) => {
         if (err) {
           console.error('Error inserting notification:', err);
           reject(err);
