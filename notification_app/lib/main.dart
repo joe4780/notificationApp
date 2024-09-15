@@ -35,8 +35,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String _message = '';
   List<String> _selectedUsers = [];
   String _expiryDate = '';
-  List<String> _users = [];
-  List<dynamic> _notifications = [];
+  List<Map<String, dynamic>> _users = [];
+  List<Map<String, dynamic>> _notifications = [];
   final ApiService apiService =
       ApiService('http://localhost:3000'); // Initialize ApiService
 
@@ -51,7 +51,7 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       final usersData = await apiService.fetchUsers();
       setState(() {
-        _users = List<String>.from(usersData.map((user) => user['name']));
+        _users = List<Map<String, dynamic>>.from(usersData);
       });
     } catch (e) {
       print('Error fetching users: $e');
@@ -62,7 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
     try {
       final notificationsData = await apiService.fetchNotifications();
       setState(() {
-        _notifications = notificationsData;
+        _notifications = List<Map<String, dynamic>>.from(notificationsData);
       });
     } catch (e) {
       print('Error fetching notifications: $e');
@@ -89,6 +89,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
         if (response['error'] == null) {
           _fetchNotifications();
+          // Clear the form and state variables
+          _formKey.currentState!.reset();
+          setState(() {
+            _message = '';
+            _selectedUsers = [];
+            _expiryDate = '';
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Notification sent!')),
           );
@@ -177,10 +184,17 @@ class _MyHomePageState extends State<MyHomePage> {
                         final notification = _notifications[index];
                         final isRead =
                             notification['is_read'] == 1; // Convert to boolean
+
+                        // Find the user name corresponding to user_id
+                        final userId = notification['user_id'];
+                        final userName = _users.firstWhere(
+                          (user) => user['id'] == userId,
+                          orElse: () => {'name': 'Unknown'},
+                        )['name'];
+
                         return ListTile(
                           title: Text(notification['message']),
-                          subtitle: Text(
-                              'Sent to: ${notification['user_id']} - Read: $isRead'),
+                          subtitle: Text('Sent to: $userName - Read: $isRead'),
                           trailing: isRead
                               ? const Icon(Icons.check, color: Colors.green)
                               : const Icon(Icons.clear, color: Colors.red),
@@ -208,14 +222,14 @@ class _MyHomePageState extends State<MyHomePage> {
                 mainAxisSize: MainAxisSize.min,
                 children: _users.map((user) {
                   return CheckboxListTile(
-                    title: Text(user),
-                    value: selectedUsers.contains(user),
+                    title: Text(user['name']),
+                    value: selectedUsers.contains(user['name']),
                     onChanged: (isChecked) {
                       setState(() {
                         if (isChecked == true) {
-                          selectedUsers.add(user);
+                          selectedUsers.add(user['name']);
                         } else {
-                          selectedUsers.remove(user);
+                          selectedUsers.remove(user['name']);
                         }
                       });
                     },
