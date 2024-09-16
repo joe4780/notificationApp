@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'post.dart'; // Import the ApiService class
+import 'post.dart';
+import 'package:intl/intl.dart';
 
 void main() {
   runApp(const MyApp());
@@ -37,8 +38,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String _expiryDate = '';
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _notifications = [];
-  final ApiService apiService =
-      ApiService('http://localhost:3000'); // Initialize ApiService
+  final ApiService apiService = ApiService('http://localhost:3000');
 
   @override
   void initState() {
@@ -89,7 +89,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
         if (response['error'] == null) {
           _fetchNotifications();
-          // Clear the form and state variables
           _formKey.currentState!.reset();
           setState(() {
             _message = '';
@@ -182,19 +181,23 @@ class _MyHomePageState extends State<MyHomePage> {
                       itemCount: _notifications.length,
                       itemBuilder: (context, index) {
                         final notification = _notifications[index];
-                        final isRead =
-                            notification['is_read'] == 1; // Convert to boolean
+                        final isRead = notification['is_read'] == 1;
 
-                        // Find the user name corresponding to user_id
                         final userId = notification['user_id'];
                         final userName = _users.firstWhere(
                           (user) => user['id'] == userId,
                           orElse: () => {'name': 'Unknown'},
                         )['name'];
 
+                        final timestamp = notification['sent_at'] != null
+                            ? DateFormat('yyyy-MM-dd HH:mm:ss')
+                                .format(DateTime.parse(notification['sent_at']))
+                            : 'Unknown';
+
                         return ListTile(
                           title: Text(notification['message']),
-                          subtitle: Text('Sent to: $userName - Read: $isRead'),
+                          subtitle: Text(
+                              'Sent to: $userName - Read: $isRead - Sent at: $timestamp'),
                           trailing: isRead
                               ? const Icon(Icons.check, color: Colors.green)
                               : const Icon(Icons.clear, color: Colors.red),

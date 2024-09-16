@@ -6,12 +6,10 @@ class ApiService {
 
   ApiService(this.baseUrl);
 
-  // Method to send notifications from the admin to users
   Future<dynamic> sendNotification(
       String message, List<int> userIds, String expiryDate) async {
     final url = Uri.parse('$baseUrl/notifications');
     try {
-      // Send POST request to the server with notification data
       final response = await http.post(
         url,
         headers: {
@@ -24,25 +22,20 @@ class ApiService {
         }),
       );
 
-      // Check if the request was successful
       if (response.statusCode == 201) {
-        // Successfully sent the notification
         return jsonDecode(response.body);
       } else {
-        // Handle error
         return {
           'error': 'Failed to send notification: ${response.statusCode}',
         };
       }
     } catch (e) {
-      // Handle network or JSON errors
       return {
         'error': 'Error sending notification: $e',
       };
     }
   }
 
-  // Fetch all users from the database (for user selection in the admin panel)
   Future<List<dynamic>> fetchUsers() async {
     final url = Uri.parse('$baseUrl/users');
     try {
