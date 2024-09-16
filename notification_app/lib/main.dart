@@ -1,8 +1,26 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'post.dart';
-import 'package:intl/intl.dart';
+import 'login_screen.dart';
+import 'registration_screen.dart';
+import 'admin_screen.dart';
+import 'user_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (kIsWeb) {
+    await Firebase.initializeApp(
+        options: const FirebaseOptions(
+            apiKey: "AIzaSyCtDOKuN4d1gprPXytHY5yMnaRmJy7mhiE",
+            authDomain: "notificationsapp-a3306.firebaseapp.com",
+            projectId: "notificationsapp-a3306",
+            storageBucket: "notificationsapp-a3306.appspot.com",
+            messagingSenderId: "731488632895",
+            appId: "1:731488632895:web:6c7274bc43b10e2aeeb88a",
+            measurementId: "G-KCEV8X8MRV"));
+  } else {
+    await Firebase.initializeApp();
+  }
   runApp(const MyApp());
 }
 
@@ -17,245 +35,24 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Admin Notification Panel'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  final _formKey = GlobalKey<FormState>();
-  String _message = '';
-  List<String> _selectedUsers = [];
-  String _expiryDate = '';
-  List<Map<String, dynamic>> _users = [];
-  List<Map<String, dynamic>> _notifications = [];
-  final ApiService apiService = ApiService('http://localhost:3000');
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchUsers();
-    _fetchNotifications();
-  }
-
-  Future<void> _fetchUsers() async {
-    try {
-      final usersData = await apiService.fetchUsers();
-      setState(() {
-        _users = List<Map<String, dynamic>>.from(usersData);
-      });
-    } catch (e) {
-      print('Error fetching users: $e');
-    }
-  }
-
-  Future<void> _fetchNotifications() async {
-    try {
-      final notificationsData = await apiService.fetchNotifications();
-      setState(() {
-        _notifications = List<Map<String, dynamic>>.from(notificationsData);
-      });
-    } catch (e) {
-      print('Error fetching notifications: $e');
-    }
-  }
-
-  Future<void> _sendNotification() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-
-      try {
-        final usersData = await apiService.fetchUsers();
-        final userIdsMap = {
-          for (var user in usersData) user['name']: user['id']
-        };
-        final selectedUserIds =
-            _selectedUsers.map((name) => userIdsMap[name]).toList();
-
-        final response = await apiService.sendNotification(
-          _message,
-          selectedUserIds.cast<int>(),
-          _expiryDate,
-        );
-
-        if (response['error'] == null) {
-          _fetchNotifications();
-          _formKey.currentState!.reset();
-          setState(() {
-            _message = '';
-            _selectedUsers = [];
-            _expiryDate = '';
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Notification sent!')),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(response['error'])),
-          );
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegistrationScreen(),
+        '/admin': (context) => const AdminScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/user') {
+          final args = settings.arguments as Map<String, dynamic>?;
+          final userId = args?['userId'] as int?;
+          if (userId != null) {
+            return MaterialPageRoute(
+              builder: (context) => UserScreen(userId: userId),
+            );
+          }
         }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending notification: $e')),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Text('Admin Panel - Send Notification',
-                  style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () async {
-                  final selectedUsers = await _showUserSelectionDialog(context);
-                  if (selectedUsers != null) {
-                    setState(() {
-                      _selectedUsers = selectedUsers;
-                    });
-                  }
-                },
-                child: const Text('Select Users'),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Selected Users: ${_selectedUsers.length}',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 20),
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      decoration: const InputDecoration(
-                          labelText: 'Notification Message'),
-                      onSaved: (value) {
-                        _message = value!;
-                      },
-                      validator: (value) =>
-                          value!.isEmpty ? 'Please enter a message' : null,
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                          labelText: 'Expiry Date (optional)'),
-                      onSaved: (value) {
-                        _expiryDate = value!;
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _sendNotification,
-                      child: const Text('Send Notification'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text('Notifications',
-                  style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 10),
-              _notifications.isNotEmpty
-                  ? ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _notifications.length,
-                      itemBuilder: (context, index) {
-                        final notification = _notifications[index];
-                        final isRead = notification['is_read'] == 1;
-
-                        final userId = notification['user_id'];
-                        final userName = _users.firstWhere(
-                          (user) => user['id'] == userId,
-                          orElse: () => {'name': 'Unknown'},
-                        )['name'];
-
-                        final timestamp = notification['sent_at'] != null
-                            ? DateFormat('yyyy-MM-dd HH:mm:ss')
-                                .format(DateTime.parse(notification['sent_at']))
-                            : 'Unknown';
-
-                        return ListTile(
-                          title: Text(notification['message']),
-                          subtitle: Text(
-                              'Sent to: $userName - Read: $isRead - Sent at: $timestamp'),
-                          trailing: isRead
-                              ? const Icon(Icons.check, color: Colors.green)
-                              : const Icon(Icons.clear, color: Colors.red),
-                        );
-                      },
-                    )
-                  : const Text('No notifications available'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<List<String>?> _showUserSelectionDialog(BuildContext context) async {
-    List<String> selectedUsers = [];
-    return showDialog<List<String>>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Select Users'),
-          content: StatefulBuilder(
-            builder: (context, setState) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: _users.map((user) {
-                  return CheckboxListTile(
-                    title: Text(user['name']),
-                    value: selectedUsers.contains(user['name']),
-                    onChanged: (isChecked) {
-                      setState(() {
-                        if (isChecked == true) {
-                          selectedUsers.add(user['name']);
-                        } else {
-                          selectedUsers.remove(user['name']);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
-              );
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(selectedUsers);
-              },
-              child: const Text('OK'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(null);
-              },
-              child: const Text('Cancel'),
-            ),
-          ],
-        );
+        // If route is not found, navigate to login screen
+        return MaterialPageRoute(builder: (context) => const LoginScreen());
       },
     );
   }

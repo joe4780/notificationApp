@@ -64,4 +64,21 @@ class ApiService {
       throw Exception('Error fetching notifications: $e');
     }
   }
+
+  // Fetch notifications for a specific user
+  Future<List<dynamic>> fetchUserNotifications(int userId) async {
+    final url = Uri.parse('$baseUrl/users/$userId/notifications');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load user notifications');
+      }
+    } catch (e) {
+      throw Exception('Error fetching user notifications: $e');
+    }
+  }
+
+  markNotificationAsRead(int notificationId) {}
 }
