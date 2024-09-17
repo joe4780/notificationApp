@@ -1,58 +1,48 @@
-const db = require('../db'); // Import MySQL connection
+const db = require('../db');
 
-// Fetch notifications for a specific user
-exports.getUserNotifications = (req, res) => {
+exports.getUserNotifications = async (req, res) => {
   const userId = req.params.userId;
   const query = 'SELECT * FROM notifications WHERE user_id = ?';
-  db.query(query, [userId], (err, results) => {
-    if (err) {
-      return res.status(500).send(err);
-    }
+  
+  try {
+    const [results] = await db.query(query, [userId]);
     res.json(results);
-  });
+  } catch (error) {
+    console.error('Error fetching user notifications:', error);
+    res.status(500).json({ error: 'Failed to fetch user notifications' });
+  }
 };
 
-// Fetch all notifications
-exports.getAllNotifications = (req, res) => {
+exports.getNotifications = async (req, res) => {
   const query = 'SELECT * FROM notifications';
-  db.query(query, (err, results) => {
-    if (err) {
-      return res.status(500).send(err);
-    }
+  
+  try {
+    const [results] = await db.query(query);
     res.json(results);
-  });
+  } catch (error) {
+    console.error('Error fetching all notifications:', error);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
 };
 
-// Send a notification
-exports.sendNotification = (req, res) => {
+exports.sendNotification = async (req, res) => {
   const { message, userIds, expiry_date } = req.body;
 
   if (!message || !userIds || !userIds.length) {
     return res.status(400).json({ error: 'Invalid data' });
   }
 
-  // Handle expiry_date: if empty, set it to null
   const expiryDate = expiry_date && expiry_date.trim() !== '' ? expiry_date : null;
+  const now = new Date();
 
-  Promise.all(userIds.map(userId => {
-    return new Promise((resolve, reject) => {
-      const query = 'INSERT INTO notifications (user_id, message, expiry_date, is_read, sent_at) VALUES (?, ?, ?, ?, ?)';
-      const now = new Date(); // Current timestamp
-      db.query(query, [userId, message, expiryDate, false, now], (err, result) => {
-        if (err) {
-          console.error('Error inserting notification:', err);
-          reject(err);
-        } else {
-          resolve(result);
-        }
-      });
-    });
-  }))
-    .then(() => {
-      res.status(201).json({ success: true, message: 'Notification sent!' });
-    })
-    .catch(err => {
-      console.error('Error inserting notifications:', err);
-      res.status(500).json({ error: 'Failed to insert notifications' });
-    });
+  try {
+    const query = 'INSERT INTO notifications (user_id, message, expiry_date, is_read, sent_at) VALUES ?';
+    const values = userIds.map(userId => [userId, message, expiryDate, false, now]);
+    
+    await db.query(query, [values]);
+    res.status(201).json({ success: true, message: 'Notification sent!' });
+  } catch (error) {
+    console.error('Error inserting notifications:', error);
+    res.status(500).json({ error: 'Failed to insert notifications' });
+  }
 };

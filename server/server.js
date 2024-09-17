@@ -1,29 +1,38 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
-const db = require('./db'); // Importing the MySQL connection
-const userController = require('./controllers/userController'); // Importing user controller
-const notificationController = require('./controllers/notificationController'); // Importing notification controller
-
 const app = express();
-app.use(bodyParser.json());
-app.use(cors());
+const port = 3000;
 
-// Root route for basic server check
-app.get('/', (req, res) => {
-  res.send('Server is up and running');
+// Import controllers
+const userController = require('./controllers/userController');
+const notificationController = require('./controllers/notificationController');
+
+// Middleware
+app.use(cors()); // Add this line to enable CORS for all routes
+app.use(express.json());
+
+// Helper function to wrap route handlers
+const asyncHandler = (fn) => (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+};
+
+// Routes
+app.get('/users', asyncHandler(userController.getUsers));
+app.post('/notifications', asyncHandler(notificationController.sendNotification));
+app.get('/notifications', asyncHandler(notificationController.getNotifications));
+app.get('/users/:userId/notifications', asyncHandler(notificationController.getUserNotifications));
+
+// Add these routes for user registration and login
+app.post('/register', asyncHandler(userController.register));
+app.post('/login', asyncHandler(userController.login));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
 });
 
-// User routes
-app.post('/register', userController.register);
-app.post('/login', userController.login);
-
-// Notification routes
-app.get('/notifications/:userId', notificationController.getUserNotifications);
-app.get('/notifications', notificationController.getAllNotifications);
-app.post('/notifications', notificationController.sendNotification);
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Start server
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
 });

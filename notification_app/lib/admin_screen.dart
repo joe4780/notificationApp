@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
+  const AdminScreen({Key? key}) : super(key: key);
 
   @override
   State<AdminScreen> createState() => _AdminScreenState();
@@ -13,7 +13,7 @@ class _AdminScreenState extends State<AdminScreen> {
   final _notificationFormKey = GlobalKey<FormState>();
   final _messageController = TextEditingController();
   final _expiryDateController = TextEditingController();
-  List<dynamic> _users = [];
+  List<Map<String, dynamic>> _users = [];
   Set<int> _selectedUserIds = {};
   bool _isLoading = false;
   bool _isSending = false;
@@ -24,27 +24,42 @@ class _AdminScreenState extends State<AdminScreen> {
     _fetchUsers();
   }
 
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _expiryDateController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchUsers() async {
     setState(() {
       _isLoading = true;
     });
     try {
       final response = await http.get(Uri.parse('http://localhost:3000/users'));
+      print('Raw response: ${response.body}'); // Debugging line
       if (response.statusCode == 200) {
+        final List<dynamic> userList = jsonDecode(response.body);
         setState(() {
-          _users = jsonDecode(response.body);
+          _users =
+              userList.map((user) => user as Map<String, dynamic>).toList();
         });
       } else {
+        print('Failed to load users. Status code: ${response.statusCode}');
         throw Exception('Failed to load users');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching users: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching users: $e')),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -64,25 +79,33 @@ class _AdminScreenState extends State<AdminScreen> {
           }),
         );
         if (response.statusCode == 201) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Notification sent successfully!')),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Notification sent successfully!')),
+            );
+          }
           _messageController.clear();
           _expiryDateController.clear();
           setState(() {
             _selectedUserIds.clear();
           });
         } else {
+          print(
+              'Failed to send notification. Status code: ${response.statusCode}');
           throw Exception('Failed to send notification');
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending notification: $e')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error sending notification: $e')),
+          );
+        }
       } finally {
-        setState(() {
-          _isSending = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isSending = false;
+          });
+        }
       }
     }
   }
@@ -142,19 +165,24 @@ class _AdminScreenState extends State<AdminScreen> {
                     itemCount: _users.length,
                     itemBuilder: (context, index) {
                       final user = _users[index];
-                      final isSelected = _selectedUserIds.contains(user['id']);
+                      final userId = user['id'] as int?;
+                      final userName = user['name'] as String?;
+                      final isSelected =
+                          userId != null && _selectedUserIds.contains(userId);
                       return CheckboxListTile(
-                        title: Text(user['name']),
+                        title: Text(userName ?? 'Unknown User'),
                         value: isSelected,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            if (value == true) {
-                              _selectedUserIds.add(user['id']);
-                            } else {
-                              _selectedUserIds.remove(user['id']);
-                            }
-                          });
-                        },
+                        onChanged: userId == null
+                            ? null
+                            : (bool? value) {
+                                setState(() {
+                                  if (value == true) {
+                                    _selectedUserIds.add(userId);
+                                  } else {
+                                    _selectedUserIds.remove(userId);
+                                  }
+                                });
+                              },
                       );
                     },
                   ),
