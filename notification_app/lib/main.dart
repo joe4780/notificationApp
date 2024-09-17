@@ -10,14 +10,16 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
     await Firebase.initializeApp(
-        options: const FirebaseOptions(
-            apiKey: "AIzaSyCtDOKuN4d1gprPXytHY5yMnaRmJy7mhiE",
-            authDomain: "notificationsapp-a3306.firebaseapp.com",
-            projectId: "notificationsapp-a3306",
-            storageBucket: "notificationsapp-a3306.appspot.com",
-            messagingSenderId: "731488632895",
-            appId: "1:731488632895:web:6c7274bc43b10e2aeeb88a",
-            measurementId: "G-KCEV8X8MRV"));
+      options: const FirebaseOptions(
+        apiKey: "AIzaSyCtDOKuN4d1gprPXytHY5yMnaRmJy7mhiE",
+        authDomain: "notificationsapp-a3306.firebaseapp.com",
+        projectId: "notificationsapp-a3306",
+        storageBucket: "notificationsapp-a3306.appspot.com",
+        messagingSenderId: "731488632895",
+        appId: "1:731488632895:web:6c7274bc43b10e2aeeb88a",
+        measurementId: "G-KCEV8X8MRV",
+      ),
+    );
   } else {
     await Firebase.initializeApp();
   }

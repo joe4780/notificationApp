@@ -1,3 +1,5 @@
+const db = require('../db'); // Import MySQL connection
+
 // Fetch notifications for a specific user
 exports.getUserNotifications = (req, res) => {
   const userId = req.params.userId;
