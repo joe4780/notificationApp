@@ -28,18 +28,32 @@ class _UserScreenState extends State<UserScreen> {
       _isLoading = true;
       _error = null;
     });
+
     try {
       final notificationsData =
           await apiService.fetchUserNotifications(widget.userId);
-      setState(() {
-        _notifications = List<Map<String, dynamic>>.from(notificationsData);
-        _isLoading = false;
-      });
+
+      print('Fetched notifications data: $notificationsData'); // Debugging
+
+      // Ensure the data is a list of maps
+      if (notificationsData is List) {
+        setState(() {
+          _notifications = List<Map<String, dynamic>>.from(notificationsData);
+        });
+      } else {
+        throw Exception('Unexpected data format');
+      }
     } catch (e) {
+      print('Error during notifications fetch: $e'); // Debugging
       setState(() {
         _error = 'Error fetching notifications: $e';
-        _isLoading = false;
       });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
