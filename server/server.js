@@ -26,6 +26,8 @@ app.get('/users/:userId/notifications', asyncHandler(notificationController.getU
 app.post('/register', asyncHandler(userController.register));
 app.post('/login', asyncHandler(userController.login));
 
+app.put('/notifications/:notificationId/read', notificationController.markNotificationAsRead);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);

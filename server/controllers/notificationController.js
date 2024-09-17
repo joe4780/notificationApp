@@ -13,6 +13,19 @@ exports.getUserNotifications = async (req, res) => {
   }
 };
 
+exports.markNotificationAsRead = async (req, res) => {
+  const notificationId = req.params.notificationId;
+  const query = 'UPDATE notifications SET is_read = true WHERE id = ?';
+
+  try {
+    await db.query(query, [notificationId]);
+    res.json({ success: true, message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ error: 'Failed to mark notification as read' });
+  }
+};
+
 exports.getNotifications = async (req, res) => {
   const query = 'SELECT * FROM notifications';
   
