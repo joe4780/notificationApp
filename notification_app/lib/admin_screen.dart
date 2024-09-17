@@ -17,6 +17,7 @@ class _AdminScreenState extends State<AdminScreen> {
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _notifications = [];
   Set<int> _selectedUserIds = {};
+  List<String> _selectedUsernames = []; // List to store selected usernames
   bool _isLoading = false;
   bool _isSending = false;
 
@@ -121,6 +122,7 @@ class _AdminScreenState extends State<AdminScreen> {
           _expiryDateController.clear();
           setState(() {
             _selectedUserIds.clear();
+            _selectedUsernames.clear(); // Clear the selected usernames
           });
           _fetchNotifications(); // Refresh the notifications list
         } else {
@@ -148,6 +150,30 @@ class _AdminScreenState extends State<AdminScreen> {
       return true;
     } catch (e) {
       return false;
+    }
+  }
+
+  void _openUserSelectionScreen() async {
+    final selectedUsers = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserSelectionScreen(
+          users: _users,
+          selectedUserIds: _selectedUserIds,
+        ),
+      ),
+    );
+
+    if (selectedUsers != null) {
+      setState(() {
+        _selectedUserIds = selectedUsers;
+
+        // Get the selected usernames based on user IDs
+        _selectedUsernames = _users
+            .where((user) => _selectedUserIds.contains(user['id']))
+            .map((user) => user['username'] as String)
+            .toList();
+      });
     }
   }
 
@@ -202,35 +228,18 @@ class _AdminScreenState extends State<AdminScreen> {
                     },
                   ),
                   const SizedBox(height: 20),
-                  if (_isLoading)
-                    const CircularProgressIndicator()
-                  else if (_users.isNotEmpty)
+                  ElevatedButton(
+                    onPressed: _openUserSelectionScreen,
+                    child: const Text('Select Users'),
+                  ),
+                  const SizedBox(height: 20),
+                  if (_selectedUsernames.isNotEmpty)
                     Wrap(
                       spacing: 8.0,
-                      children: _users.map((user) {
-                        final userId = user['id'] as int?;
-                        final userName = user['username'] as String?;
-                        final isSelected =
-                            userId != null && _selectedUserIds.contains(userId);
-                        return FilterChip(
-                          label: Text(userName ?? 'Unknown User'),
-                          selected: isSelected,
-                          onSelected: userId == null
-                              ? null
-                              : (bool selected) {
-                                  setState(() {
-                                    if (selected) {
-                                      _selectedUserIds.add(userId);
-                                    } else {
-                                      _selectedUserIds.remove(userId);
-                                    }
-                                  });
-                                },
-                        );
-                      }).toList(),
-                    )
-                  else
-                    const Text('No users found'),
+                      children: _selectedUsernames
+                          .map((username) => Chip(label: Text(username)))
+                          .toList(),
+                    ),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _isSending ? null : _sendNotification,
@@ -278,6 +287,68 @@ class _AdminScreenState extends State<AdminScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Screen to select users
+class UserSelectionScreen extends StatefulWidget {
+  final List<Map<String, dynamic>> users;
+  final Set<int> selectedUserIds;
+
+  const UserSelectionScreen({
+    Key? key,
+    required this.users,
+    required this.selectedUserIds,
+  }) : super(key: key);
+
+  @override
+  State<UserSelectionScreen> createState() => _UserSelectionScreenState();
+}
+
+class _UserSelectionScreenState extends State<UserSelectionScreen> {
+  late Set<int> _selectedUserIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedUserIds = Set.from(widget.selectedUserIds);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Select Users'),
+      ),
+      body: ListView.builder(
+        itemCount: widget.users.length,
+        itemBuilder: (context, index) {
+          final user = widget.users[index];
+          final userId = user['id'] as int;
+          final isSelected = _selectedUserIds.contains(userId);
+
+          return CheckboxListTile(
+            title: Text(user['username']),
+            value: isSelected,
+            onChanged: (bool? selected) {
+              setState(() {
+                if (selected ?? false) {
+                  _selectedUserIds.add(userId);
+                } else {
+                  _selectedUserIds.remove(userId);
+                }
+              });
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.pop(context, _selectedUserIds);
+        },
+        child: const Icon(Icons.check),
       ),
     );
   }
