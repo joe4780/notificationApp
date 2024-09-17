@@ -14,6 +14,7 @@ class _AdminScreenState extends State<AdminScreen> {
   final _messageController = TextEditingController();
   final _expiryDateController = TextEditingController();
   List<Map<String, dynamic>> _users = [];
+  List<Map<String, dynamic>> _notifications = [];
   Set<int> _selectedUserIds = {};
   bool _isLoading = false;
   bool _isSending = false;
@@ -22,6 +23,7 @@ class _AdminScreenState extends State<AdminScreen> {
   void initState() {
     super.initState();
     _fetchUsers();
+    _fetchNotifications();
   }
 
   @override
@@ -37,7 +39,6 @@ class _AdminScreenState extends State<AdminScreen> {
     });
     try {
       final response = await http.get(Uri.parse('http://localhost:3000/users'));
-      print('Raw response: ${response.body}'); // Debugging line
       if (response.statusCode == 200) {
         final List<dynamic> userList = jsonDecode(response.body);
         setState(() {
@@ -45,13 +46,44 @@ class _AdminScreenState extends State<AdminScreen> {
               userList.map((user) => user as Map<String, dynamic>).toList();
         });
       } else {
-        print('Failed to load users. Status code: ${response.statusCode}');
         throw Exception('Failed to load users');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error fetching users: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchNotifications() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final response =
+          await http.get(Uri.parse('http://localhost:3000/notifications'));
+      if (response.statusCode == 200) {
+        final List<dynamic> notificationsList = jsonDecode(response.body);
+        setState(() {
+          _notifications = notificationsList
+              .map((notification) => notification as Map<String, dynamic>)
+              .toList();
+        });
+      } else {
+        throw Exception('Failed to load notifications');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching notifications: $e')),
         );
       }
     } finally {
@@ -90,8 +122,6 @@ class _AdminScreenState extends State<AdminScreen> {
             _selectedUserIds.clear();
           });
         } else {
-          print(
-              'Failed to send notification. Status code: ${response.statusCode}');
           throw Exception('Failed to send notification');
         }
       } catch (e) {
@@ -195,6 +225,20 @@ class _AdminScreenState extends State<AdminScreen> {
                 child: _isSending
                     ? const CircularProgressIndicator()
                     : const Text('Send Notification'),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _notifications.length,
+                  itemBuilder: (context, index) {
+                    final notification = _notifications[index];
+                    final isRead = notification['read'] as bool? ?? false;
+                    return ListTile(
+                      title: Text(notification['message'] ?? 'No message'),
+                      subtitle: Text(isRead ? 'Read' : 'Unread'),
+                    );
+                  },
+                ),
               ),
             ],
           ),
