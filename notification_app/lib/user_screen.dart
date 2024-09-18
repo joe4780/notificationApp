@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'post.dart';
+import 'package:notification_app/api/api_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class UserScreen extends StatefulWidget {
   final int userId;
@@ -30,21 +32,24 @@ class _UserScreenState extends State<UserScreen> {
     });
 
     try {
-      final notificationsData =
-          await apiService.fetchUserNotifications(widget.userId);
+      final response = await http.get(
+        Uri.parse('${apiService.baseUrl}/users/${widget.userId}/notifications'),
+        headers: {'Content-Type': 'application/json'},
+      );
 
-      print('Fetched notifications data: $notificationsData'); // Debugging
-
-      // Ensure the data is a list of maps
-      if (notificationsData is List) {
+      if (response.statusCode == 200) {
+        final List<dynamic> decodedData = json.decode(response.body);
         setState(() {
-          _notifications = List<Map<String, dynamic>>.from(notificationsData);
+          _notifications = List<Map<String, dynamic>>.from(decodedData);
         });
       } else {
-        throw Exception('Unexpected data format');
+        throw Exception('Failed to load notifications: ${response.statusCode}');
       }
+    } on http.ClientException catch (e) {
+      setState(() {
+        _error = 'Network error: $e';
+      });
     } catch (e) {
-      print('Error during notifications fetch: $e'); // Debugging
       setState(() {
         _error = 'Error fetching notifications: $e';
       });
@@ -60,12 +65,42 @@ class _UserScreenState extends State<UserScreen> {
   Future<void> _markAsRead(int notificationId) async {
     try {
       await apiService.markNotificationAsRead(notificationId);
-      await _fetchNotifications(); // Refresh the list after marking as read
+      setState(() {
+        final index =
+            _notifications.indexWhere((n) => n['id'] == notificationId);
+        if (index != -1) {
+          _notifications[index]['is_read'] = true;
+        }
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error marking notification as read: $e')),
       );
     }
+  }
+
+  void _openNotificationDetails(Map<String, dynamic> notification) async {
+    if (notification['is_read'] != true) {
+      await _markAsRead(notification['id']);
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Notification Details'),
+          content: Text(notification['message']),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Close'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -86,7 +121,7 @@ class _UserScreenState extends State<UserScreen> {
                         itemCount: _notifications.length,
                         itemBuilder: (context, index) {
                           final notification = _notifications[index];
-                          final isRead = notification['is_read'] == 1;
+                          final isRead = notification['is_read'] == true;
                           final timestamp = notification['sent_at'] != null
                               ? DateFormat('yyyy-MM-dd HH:mm:ss').format(
                                   DateTime.parse(notification['sent_at']))
@@ -104,7 +139,6 @@ class _UserScreenState extends State<UserScreen> {
                             ),
                             onDismissed: (direction) {
                               // Implement delete functionality here
-                              // For now, we'll just remove it from the list
                               setState(() {
                                 _notifications.removeAt(index);
                               });
@@ -120,14 +154,11 @@ class _UserScreenState extends State<UserScreen> {
                               ),
                               subtitle: Text('Sent at: $timestamp'),
                               trailing: isRead
-                                  ? const Icon(Icons.check, color: Colors.green)
-                                  : IconButton(
-                                      icon: const Icon(
-                                          Icons.check_box_outline_blank,
-                                          color: Colors.red),
-                                      onPressed: () =>
-                                          _markAsRead(notification['id']),
-                                    ),
+                                  ? null
+                                  : const Icon(Icons.circle,
+                                      color: Colors.blue, size: 12),
+                              onTap: () =>
+                                  _openNotificationDetails(notification),
                             ),
                           );
                         },

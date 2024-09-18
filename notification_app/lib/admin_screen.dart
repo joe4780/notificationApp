@@ -17,7 +17,7 @@ class _AdminScreenState extends State<AdminScreen> {
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _notifications = [];
   Set<int> _selectedUserIds = {};
-  List<String> _selectedUsernames = []; // List to store selected usernames
+  List<String> _selectedUsernames = [];
   bool _isLoading = false;
   bool _isSending = false;
 
@@ -122,9 +122,9 @@ class _AdminScreenState extends State<AdminScreen> {
           _expiryDateController.clear();
           setState(() {
             _selectedUserIds.clear();
-            _selectedUsernames.clear(); // Clear the selected usernames
+            _selectedUsernames.clear();
           });
-          _fetchNotifications(); // Refresh the notifications list
+          _fetchNotifications();
         } else {
           throw Exception('Failed to send notification');
         }
@@ -167,8 +167,6 @@ class _AdminScreenState extends State<AdminScreen> {
     if (selectedUsers != null) {
       setState(() {
         _selectedUserIds = selectedUsers;
-
-        // Get the selected usernames based on user IDs
         _selectedUsernames = _users
             .where((user) => _selectedUserIds.contains(user['id']))
             .map((user) => user['username'] as String)
@@ -260,7 +258,7 @@ class _AdminScreenState extends State<AdminScreen> {
                           itemCount: _notifications.length,
                           itemBuilder: (context, index) {
                             final notification = _notifications[index];
-                            final isRead = notification['is_read'] == 1;
+                            final isRead = notification['is_read'] == true;
                             final sentAt = notification['sent_at'] != null
                                 ? DateFormat('yyyy-MM-dd HH:mm').format(
                                     DateTime.parse(notification['sent_at']))
@@ -271,8 +269,14 @@ class _AdminScreenState extends State<AdminScreen> {
                                 orElse: () => {'username': 'Unknown User'});
 
                             return ListTile(
-                              title:
-                                  Text(notification['message'] ?? 'No message'),
+                              title: Text(
+                                notification['message'] ?? 'No message',
+                                style: TextStyle(
+                                  fontWeight: isRead
+                                      ? FontWeight.normal
+                                      : FontWeight.bold,
+                                ),
+                              ),
                               subtitle: Text(
                                   'Sent to: ${user['username']} on $sentAt'),
                               trailing: Icon(
@@ -292,7 +296,6 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 }
 
-// Screen to select users
 class UserSelectionScreen extends StatefulWidget {
   final List<Map<String, dynamic>> users;
   final Set<int> selectedUserIds;
