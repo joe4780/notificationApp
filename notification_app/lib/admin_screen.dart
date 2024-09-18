@@ -269,22 +269,23 @@ class _AdminScreenState extends State<AdminScreen> {
                                 orElse: () => {'username': 'Unknown User'});
 
                             return ListTile(
-                              title: Text(
-                                notification['message'] ?? 'No message',
-                                style: TextStyle(
-                                  fontWeight: isRead
-                                      ? FontWeight.normal
-                                      : FontWeight.bold,
-                                ),
+                              title:
+                                  Text(notification['message'] ?? 'No message'),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                      'Sent to: ${user['username']} on $sentAt'),
+                                  Text(
+                                    isRead ? 'Read' : 'Unread',
+                                    style: TextStyle(
+                                      color: isRead ? Colors.green : Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              subtitle: Text(
-                                  'Sent to: ${user['username']} on $sentAt'),
-                              trailing: Icon(
-                                isRead
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                                color: isRead ? Colors.green : Colors.red,
-                              ),
+                              isThreeLine: true,
                             );
                           },
                         ),
