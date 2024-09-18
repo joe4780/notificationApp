@@ -258,7 +258,7 @@ class _AdminScreenState extends State<AdminScreen> {
                           itemCount: _notifications.length,
                           itemBuilder: (context, index) {
                             final notification = _notifications[index];
-                            final isRead = notification['is_read'] == true;
+                            final isRead = notification['is_read'] == 1;
                             final sentAt = notification['sent_at'] != null
                                 ? DateFormat('yyyy-MM-dd HH:mm').format(
                                     DateTime.parse(notification['sent_at']))
