@@ -15,7 +15,7 @@ class UserScreen extends StatefulWidget {
 
 class _UserScreenState extends State<UserScreen> {
   List<Map<String, dynamic>> _notifications = [];
-  final ApiService apiService = ApiService('http://localhost:3000');
+  final ApiService apiService = ApiService();
   bool _isLoading = false;
   String? _error;
 

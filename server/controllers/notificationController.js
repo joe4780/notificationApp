@@ -1,9 +1,9 @@
 const db = require('../db');
 const admin = require('firebase-admin');
 
-// Initialize Firebase Admin SDK (ensure your Firebase Admin credentials are set up correctly)
+// Initialized Firebase Admin SDK 
 admin.initializeApp({
-  credential: admin.credential.applicationDefault(), // Replace with your Firebase service account configuration
+  credential: admin.credential.applicationDefault(), 
 });
 
 exports.getUserNotifications = async (req, res) => {
@@ -21,7 +21,7 @@ exports.getUserNotifications = async (req, res) => {
 
 exports.markNotificationAsRead = async (req, res) => {
   const notificationId = req.params.notificationId;
-  const query = 'UPDATE notifications SET is_read = 1 WHERE id = ?'; // Adjusted to use 1 instead of true for MySQL
+  const query = 'UPDATE notifications SET is_read = 1 WHERE id = ?';
 
   try {
     await db.query(query, [notificationId]);
@@ -63,7 +63,7 @@ exports.sendNotification = async (req, res) => {
 
     // Fetch FCM tokens for the targeted users and send notifications
     for (const userId of userIds) {
-      const fcmToken = await getUserFcmToken(userId); // Ensure this function fetches the user's FCM token from your database
+      const fcmToken = await getUserFcmToken(userId);
 
       if (fcmToken) {
         try {
@@ -88,7 +88,7 @@ exports.sendNotification = async (req, res) => {
   }
 };
 
-// Function to fetch user's FCM token
+
 async function getUserFcmToken(userId) {
   const query = 'SELECT fcm_token FROM users WHERE id = ?';
   try {

@@ -34,7 +34,7 @@ exports.register = async (req, res) => {
 
 // Login user and update FCM token
 exports.login = async (req, res) => {
-  const { username, password, fcm_token } = req.body; // Added fcm_token
+  const { username, password, fcm_token } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Invalid data' });
   }
@@ -54,7 +54,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Update FCM token if provided
+
     if (fcm_token) {
       const updateTokenQuery = 'UPDATE users SET fcm_token = ? WHERE id = ?';
       await db.query(updateTokenQuery, [fcm_token, user.id]);
