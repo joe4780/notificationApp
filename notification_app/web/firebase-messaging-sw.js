@@ -2,7 +2,7 @@
 importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
 
-// Initialize Firebase with your app's configuration
+// Initialize Firebase with my app's configuration
 firebase.initializeApp({
   apiKey: "AIzaSyCtDOKuN4d1gprPXytHY5yMnaRmJy7mhiE",
   authDomain: "notificationsapp-a3306.firebaseapp.com",
@@ -38,5 +38,4 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // You can implement custom caching strategies here if needed
 });

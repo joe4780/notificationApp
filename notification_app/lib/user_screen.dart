@@ -138,7 +138,6 @@ class _UserScreenState extends State<UserScreen> {
                                   const Icon(Icons.delete, color: Colors.white),
                             ),
                             onDismissed: (direction) {
-                              // Implement delete functionality here
                               setState(() {
                                 _notifications.removeAt(index);
                               });
