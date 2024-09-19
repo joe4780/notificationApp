@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:firebase_messaging/firebase_messaging.dart'; // Import Firebase Messaging
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -39,11 +40,18 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text;
 
     try {
+      // Get the FCM token
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+
       final response = await http.post(
         Uri.parse(
             'http://localhost:3000/login'), // Replace with your server URL
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
+        body: jsonEncode({
+          'username': username,
+          'password': password,
+          'fcm_token': fcmToken, // Send the FCM token to the server
+        }),
       );
 
       print('Raw response: ${response.body}');
@@ -51,15 +59,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // Print the response type and contents for debugging
-        print('Response type: ${data.runtimeType}');
-        print('Response data: $data');
-
         final String? token = data['token'];
-        final dynamic userId = data['userId']; // Handle userId conversion
+        final dynamic userId = data['userId'];
         final String? role = data['role'];
 
-        // Convert userId to integer if necessary
         final int? parsedUserId =
             (userId is int) ? userId : int.tryParse(userId.toString());
 
@@ -75,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushReplacementNamed(
             context,
             role == 'admin' ? '/admin' : '/user',
-            arguments: {'userId': parsedUserId}, // Pass userId as a Map
+            arguments: {'userId': parsedUserId},
           );
         } else {
           _showErrorSnackBar('Invalid response format from server');

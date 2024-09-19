@@ -107,7 +107,7 @@ class _UserScreenState extends State<UserScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('User Notifications'),
+        title: const Text('My Notifications'),
       ),
       body: RefreshIndicator(
         onRefresh: _fetchNotifications,

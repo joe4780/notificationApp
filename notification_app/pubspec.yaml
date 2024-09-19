@@ -18,6 +18,7 @@ dependencies:
   flutter_secure_storage: ^5.0.2
   cloud_firestore: ^4.9.1
   cupertino_icons: ^1.0.8
+  flutter_local_notifications: ^16.1.0
 
 dev_dependencies:
   flutter_test:
