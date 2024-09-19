@@ -1,6 +1,6 @@
 // firebase-messaging-sw.js
-importScripts('https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.1.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
 
 // Initialize Firebase with your app's configuration
 firebase.initializeApp({
@@ -26,4 +26,17 @@ messaging.onBackgroundMessage((payload) => {
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Service Worker lifecycle events
+self.addEventListener('install', (event) => {
+  console.log('Service Worker installed');
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker activated');
+});
+
+self.addEventListener('fetch', (event) => {
+  // You can implement custom caching strategies here if needed
 });

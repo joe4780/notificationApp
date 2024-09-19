@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  final String baseUrl = 'https://gratis-pear-stew.glitch.me';
+  final String baseUrl = 'http://localhost:3000';
 
   Future<List<Map<String, dynamic>>> fetchUserNotifications(int userId) async {
     final response =
