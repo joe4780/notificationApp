@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'config.dart';
 
 class ApiService {
-  final String baseUrl = 'http://localhost:3000';
+  final String baseUrl = Config.baseUrl;
 
   Future<List<Map<String, dynamic>>> fetchUserNotifications(int userId) async {
     final response =
-        await http.get(Uri.parse('$baseUrl/notifications/user/$userId'));
+        await http.get(Uri.parse('$baseUrl/users/$userId/notifications'));
 
     if (response.statusCode == 200) {
       List<dynamic> body = jsonDecode(response.body);

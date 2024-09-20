@@ -31,7 +31,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3000/register'),
+        Uri.parse('http://192.168.100.83:3000/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': username,

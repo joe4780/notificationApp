@@ -40,7 +40,8 @@ class _AdminScreenState extends State<AdminScreen> {
       _isLoading = true;
     });
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/users'));
+      final response =
+          await http.get(Uri.parse('http://192.168.100.83:3000/users'));
       if (response.statusCode == 200) {
         final List<dynamic> userList = jsonDecode(response.body);
         setState(() {
@@ -71,7 +72,7 @@ class _AdminScreenState extends State<AdminScreen> {
     });
     try {
       final response =
-          await http.get(Uri.parse('http://localhost:3000/notifications'));
+          await http.get(Uri.parse('http://192.168.100.83:3000/notifications'));
       if (response.statusCode == 200) {
         final List<dynamic> notificationsList = jsonDecode(response.body);
         setState(() {
@@ -104,7 +105,7 @@ class _AdminScreenState extends State<AdminScreen> {
       });
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:3000/notifications'),
+          Uri.parse('http://192.168.100.83:3000/notifications'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'message': _messageController.text,
