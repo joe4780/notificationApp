@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:firebase_messaging/firebase_messaging.dart'; // Import Firebase Messaging
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -17,8 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  final storage =
-      const FlutterSecureStorage(); // Secure storage for storing token
+  final storage = const FlutterSecureStorage();
 
   @override
   void dispose() {
@@ -44,8 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final fcmToken = await FirebaseMessaging.instance.getToken();
 
       final response = await http.post(
-        Uri.parse(
-            'http://192.168.100.83:3000/login'), // Replace with your server URL
+        Uri.parse('http://192.168.100.83:3000/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': username,
