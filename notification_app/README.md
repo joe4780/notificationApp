@@ -17,3 +17,10 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+
+## running devices on an ip address using an ip address:
+1. adb tcpip 5555
+2. device one, adb connect <device-ip>:5555
+   device two, adb connect <device-ip>:5555
+3. verify connected devices: adb devices
