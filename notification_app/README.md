@@ -1,6 +1,9 @@
 # notification_app
 
-A new Flutter project.
+An in-app notification system where an admin, using the web app
+backend, can send notifications to specific users in the Flutter app and see if the users have read or not as shown here ![alt text](adminpanel.jpg). These notifications will be
+stored and retrieved from a MySQL database, and delivered through an API.T he users can receive the notification in their mobile phones as a pop up on top of the screen as shown here ![alt text](notification.jpg)
+.
 
 ## Getting Started
 
