@@ -2,20 +2,37 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'login_screen.dart';
 import 'registration_screen.dart';
 import 'admin_screen.dart';
 import 'user_screen.dart';
 
+// Background message handler for Firebase Messaging
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Handle background messages
   print('Handling a background message: ${message.messageId}');
+}
+
+// Define the AppController directly
+class AppController extends GetxController {
+  var isLoggedIn = false.obs;
+  var currentUserId = 0.obs;
+
+  void login(int userId) {
+    isLoggedIn.value = true;
+    currentUserId.value = userId;
+  }
+
+  void logout() {
+    isLoggedIn.value = false;
+    currentUserId.value = 0;
+  }
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
+  // Initialize Firebase based on platform
   if (kIsWeb) {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
@@ -32,12 +49,11 @@ Future<void> main() async {
     await Firebase.initializeApp();
   }
 
-  // Set up background message handler
+  // Set up background message handler for Firebase
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Initialize Firebase Messaging and request permissions
   FirebaseMessaging messaging = FirebaseMessaging.instance;
-
   NotificationSettings settings = await messaging.requestPermission(
     alert: true,
     badge: true,
@@ -54,6 +70,9 @@ Future<void> main() async {
   String? token = await messaging.getToken();
   print('FCM Token: $token');
 
+  // Initialize AppController using Get
+  Get.put(AppController()); // Register the global AppController here
+
   runApp(const MyApp());
 }
 
@@ -62,31 +81,24 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'Notification App',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
       initialRoute: '/login',
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegistrationScreen(),
-        '/admin': (context) => const AdminScreen(),
-      },
-      onGenerateRoute: (settings) {
-        if (settings.name == '/user') {
-          final args = settings.arguments as Map<String, dynamic>?;
-          final userId = args?['userId'] as int?;
-          if (userId != null) {
-            return MaterialPageRoute(
-              builder: (context) => UserScreen(userId: userId),
-            );
-          }
-        }
-        // If route is not found, navigate to login screen
-        return MaterialPageRoute(builder: (context) => const LoginScreen());
-      },
+      getPages: [
+        GetPage(name: '/login', page: () => LoginScreen()),
+        GetPage(name: '/register', page: () => RegistrationScreen()),
+        GetPage(name: '/admin', page: () => AdminScreen()),
+        GetPage(
+          name: '/user/:userId',
+          page: () =>
+              UserScreen(userId: int.parse(Get.parameters['userId'] ?? '0')),
+        ),
+      ],
+      unknownRoute: GetPage(name: '/notfound', page: () => LoginScreen()),
     );
   }
 }

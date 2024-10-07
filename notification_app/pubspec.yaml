@@ -19,6 +19,7 @@ dependencies:
   cloud_firestore: ^4.9.1
   cupertino_icons: ^1.0.8
   flutter_local_notifications: ^17.2.2
+  get: ^4.6.5
 
 dev_dependencies:
   flutter_test:

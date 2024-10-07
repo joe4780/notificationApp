@@ -1,45 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'main.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
-
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
-  bool _obscurePassword = true;
+// LoginController for handling login logic
+class LoginController extends GetxController {
+  final isLoading = false.obs;
+  final obscurePassword = true.obs;
   final storage = const FlutterSecureStorage();
 
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
+  // Access the global AppController
+  final AppController appController = Get.find<AppController>();
 
-  Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+  void togglePasswordVisibility() => obscurePassword.toggle();
 
-    setState(() {
-      _isLoading = true;
-    });
-
-    final username = _usernameController.text.trim();
-    final password = _passwordController.text;
+  Future<void> login(String username, String password) async {
+    isLoading.value = true;
 
     try {
-      // Get the FCM token
       final fcmToken = await FirebaseMessaging.instance.getToken();
 
       final response = await http.post(
@@ -48,60 +29,54 @@ class _LoginScreenState extends State<LoginScreen> {
         body: jsonEncode({
           'username': username,
           'password': password,
-          'fcm_token': fcmToken, // Send the FCM token to the server
+          'fcm_token': fcmToken,
         }),
       );
 
-      print('Raw response: ${response.body}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
-        final String? token = data['token'];
-        final dynamic userId = data['userId'];
-        final String? role = data['role'];
-
-        final int? parsedUserId =
-            (userId is int) ? userId : int.tryParse(userId.toString());
-
-        if (token != null && parsedUserId != null && role != null) {
-          // Store token and other details securely
-          await storage.write(key: 'auth_token', value: token);
-          await storage.write(key: 'user_id', value: parsedUserId.toString());
-          await storage.write(key: 'role', value: role);
-
-          if (!mounted) return;
-
-          // Navigate based on role
-          Navigator.pushReplacementNamed(
-            context,
-            role == 'admin' ? '/admin' : '/user',
-            arguments: {'userId': parsedUserId},
-          );
-        } else {
-          _showErrorSnackBar('Invalid response format from server');
-        }
+        await _handleSuccessfulLogin(data);
       } else {
         final errorData = jsonDecode(response.body);
-        _showErrorSnackBar(errorData['error'] ?? 'Login failed');
+        Get.snackbar('Error', errorData['error'] ?? 'Login failed');
       }
     } catch (e) {
-      print('Error during login: $e');
-      _showErrorSnackBar('An error occurred during login');
+      Get.snackbar('Error', 'An error occurred during login');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      isLoading.value = false;
     }
   }
 
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+  Future<void> _handleSuccessfulLogin(Map<String, dynamic> data) async {
+    final String? token = data['token'];
+    final dynamic userId = data['userId'];
+    final String? role = data['role'];
+
+    final int? parsedUserId =
+        (userId is int) ? userId : int.tryParse(userId.toString());
+
+    if (token != null && parsedUserId != null && role != null) {
+      await storage.write(key: 'auth_token', value: token);
+      await storage.write(key: 'user_id', value: parsedUserId.toString());
+      await storage.write(key: 'role', value: role);
+
+      appController.login(parsedUserId);
+
+      Get.offNamed(role == 'admin' ? '/admin' : '/user/$parsedUserId');
+    } else {
+      Get.snackbar('Error', 'Invalid response format from server');
+    }
   }
+}
+
+// LoginScreen Widget
+class LoginScreen extends StatelessWidget {
+  LoginScreen({Key? key}) : super(key: key);
+
+  final LoginController controller = Get.put(LoginController());
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
@@ -125,56 +100,51 @@ class _LoginScreenState extends State<LoginScreen> {
                     prefixIcon: Icon(Icons.person),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your username';
-                    }
-                    return null;
-                  },
+                  validator: (value) => value?.isEmpty ?? true
+                      ? 'Please enter your username'
+                      : null,
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                Obx(() => TextFormField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            controller.obscurePassword.value
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: controller.togglePasswordVisibility,
+                        ),
+                        border: const OutlineInputBorder(),
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                    border: const OutlineInputBorder(),
-                  ),
-                  obscureText: _obscurePassword,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    return null;
-                  },
-                ),
+                      obscureText: controller.obscurePassword.value,
+                      validator: (value) => value?.isEmpty ?? true
+                          ? 'Please enter your password'
+                          : null,
+                    )),
                 const SizedBox(height: 24),
-                _isLoading
+                Obx(() => controller.isLoading.value
                     ? const Center(child: CircularProgressIndicator())
                     : ElevatedButton(
-                        onPressed: _login,
+                        onPressed: () {
+                          if (_formKey.currentState!.validate()) {
+                            controller.login(
+                              _usernameController.text.trim(),
+                              _passwordController.text,
+                            );
+                          }
+                        },
                         child: const Padding(
                           padding: EdgeInsets.symmetric(vertical: 12),
                           child: Text('Login', style: TextStyle(fontSize: 18)),
                         ),
-                      ),
+                      )),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/register');
-                  },
+                  onPressed: () => Get.toNamed('/register'),
                   child: const Text('Don\'t have an account? Register'),
                 ),
               ],
